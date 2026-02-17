@@ -103,7 +103,7 @@
   z-index: 1;
   text-align: center;
   word-break: break-word;
-  pointer-events: none;
+  user-select: text;
 }
 
 .arrow {

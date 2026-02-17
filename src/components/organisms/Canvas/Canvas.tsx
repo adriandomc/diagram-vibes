@@ -580,7 +580,7 @@ export const Canvas: React.FC<CanvasProps> = ({
     (e: React.MouseEvent, elementId: string) => {
       e.stopPropagation();
       const element = elements.find((el) => el.id === elementId);
-      if (element && element.type !== 'arrow') {
+      if (element && element.type !== 'arrow' && element.type !== 'doubleArrow') {
         setEditingElementId(elementId);
       }
     },
@@ -834,8 +834,6 @@ export const Canvas: React.FC<CanvasProps> = ({
   const renderResizeHandles = (element: DiagramElement) => {
     if (element.id !== selectedElementId) return null;
     if (element.type === 'arrow' || element.type === 'doubleArrow' || element.type === 'text') return null;
-    // Don't show resize handles when an arrow is selected (show connection handles instead)
-    if (isArrowSelected() && element.id !== selectedElementId) return null;
 
     const size = element.size || { width: 100, height: 100 };
     const handleSize = 8;
