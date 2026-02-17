@@ -1,6 +1,28 @@
 // Type definitions for diagram elements
 
-export type ElementType = 'text' | 'rectangle' | 'circle' | 'arrow' | 'diamond' | 'triangle' | 'hexagon' | 'star';
+export type ElementType = 
+  | 'text' 
+  | 'rectangle' 
+  | 'circle' 
+  | 'arrow' 
+  | 'diamond' 
+  | 'triangle' 
+  | 'hexagon' 
+  | 'star'
+  // Flowchart shapes
+  | 'ellipse'
+  | 'roundedRect'
+  | 'parallelogram'
+  | 'cylinder'
+  | 'document'
+  | 'cloud'
+  | 'callout'
+  | 'plus'
+  // Database/system shapes
+  | 'database'
+  | 'cube'
+  // Arrows
+  | 'doubleArrow';
 
 export interface Position {
   x: number;

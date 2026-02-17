@@ -245,7 +245,7 @@ export const Canvas: React.FC<CanvasProps> = ({
       const canvasPos = screenToCanvas(e.clientX, e.clientY);
       const pos = snapToGridEnabled ? snapToGrid(canvasPos, gridSize) : canvasPos;
 
-      if (selectedTool === 'arrow') {
+      if (selectedTool === 'arrow' || selectedTool === 'doubleArrow') {
         const startElement = findElementAtPosition(pos);
         setDrawingArrow({
           start: pos,
@@ -358,9 +358,12 @@ export const Canvas: React.FC<CanvasProps> = ({
           endPoint = getConnectionPoint(endElement, startPoint);
         }
 
+        // Use the selectedTool to determine arrow type
+        const arrowType = selectedTool === 'doubleArrow' ? 'doubleArrow' : 'arrow';
+
         const newArrow: DiagramElement = {
           id: generateId(),
-          type: 'arrow',
+          type: arrowType,
           position: startPoint,
           startPoint,
           endPoint,
@@ -690,9 +693,59 @@ export const Canvas: React.FC<CanvasProps> = ({
         }
         return `M ${points.join(' L ')} Z`;
       }
+      case 'parallelogram':
+        return `M ${width * 0.2} 0 L ${width} 0 L ${width * 0.8} ${height} L 0 ${height} Z`;
+      case 'document': {
+        const waveHeight = height * 0.1;
+        return `M 0 0 L ${width} 0 L ${width} ${height - waveHeight} Q ${width * 0.75} ${height - waveHeight * 2}, ${width * 0.5} ${height - waveHeight} Q ${width * 0.25} ${height}, 0 ${height - waveHeight} Z`;
+      }
+      case 'cylinder': {
+        const ellipseHeight = height * 0.15;
+        return `M 0 ${ellipseHeight} A ${width / 2} ${ellipseHeight} 0 0 1 ${width} ${ellipseHeight} L ${width} ${height - ellipseHeight} A ${width / 2} ${ellipseHeight} 0 0 1 0 ${height - ellipseHeight} Z`;
+      }
+      case 'cloud': {
+        return `M ${width * 0.25} ${height * 0.6} 
+                C ${width * 0.1} ${height * 0.6}, ${width * 0.05} ${height * 0.45}, ${width * 0.15} ${height * 0.35}
+                C ${width * 0.1} ${height * 0.2}, ${width * 0.25} ${height * 0.1}, ${width * 0.4} ${height * 0.15}
+                C ${width * 0.45} ${height * 0.05}, ${width * 0.65} ${height * 0.05}, ${width * 0.7} ${height * 0.15}
+                C ${width * 0.85} ${height * 0.1}, ${width * 0.95} ${height * 0.25}, ${width * 0.9} ${height * 0.4}
+                C ${width * 0.98} ${height * 0.5}, ${width * 0.95} ${height * 0.65}, ${width * 0.8} ${height * 0.7}
+                C ${width * 0.85} ${height * 0.85}, ${width * 0.7} ${height * 0.95}, ${width * 0.55} ${height * 0.85}
+                C ${width * 0.45} ${height * 0.95}, ${width * 0.3} ${height * 0.9}, ${width * 0.25} ${height * 0.75}
+                C ${width * 0.1} ${height * 0.75}, ${width * 0.05} ${height * 0.65}, ${width * 0.15} ${height * 0.6}
+                Z`;
+      }
+      case 'callout': {
+        const tailSize = Math.min(width, height) * 0.15;
+        return `M 0 0 L ${width} 0 L ${width} ${height - tailSize} L ${width * 0.3} ${height - tailSize} L ${width * 0.15} ${height} L ${width * 0.2} ${height - tailSize} L 0 ${height - tailSize} Z`;
+      }
+      case 'plus': {
+        const armWidth = width * 0.3;
+        const armStart = (width - armWidth) / 2;
+        const armEnd = armStart + armWidth;
+        const armStartV = (height - armWidth * (height / width)) / 2;
+        const armEndV = armStartV + armWidth * (height / width);
+        return `M ${armStart} 0 L ${armEnd} 0 L ${armEnd} ${armStartV} L ${width} ${armStartV} L ${width} ${armEndV} L ${armEnd} ${armEndV} L ${armEnd} ${height} L ${armStart} ${height} L ${armStart} ${armEndV} L 0 ${armEndV} L 0 ${armStartV} L ${armStart} ${armStartV} Z`;
+      }
+      case 'database': {
+        const ellipseH = height * 0.12;
+        return `M 0 ${ellipseH} A ${width / 2} ${ellipseH} 0 0 0 ${width} ${ellipseH} L ${width} ${height - ellipseH} A ${width / 2} ${ellipseH} 0 0 1 0 ${height - ellipseH} Z`;
+      }
+      case 'cube': {
+        const depth = Math.min(width, height) * 0.25;
+        return `M 0 ${depth} L ${width - depth} ${depth} L ${width - depth} ${height} L 0 ${height} Z 
+                M 0 ${depth} L ${depth} 0 L ${width} 0 L ${width - depth} ${depth} Z 
+                M ${width - depth} ${depth} L ${width} 0 L ${width} ${height - depth} L ${width - depth} ${height} Z`;
+      }
       default:
         return '';
     }
+  };
+
+  // Check if element type is an SVG-based shape
+  const isSvgShape = (type: ElementType): boolean => {
+    return ['diamond', 'triangle', 'hexagon', 'star', 'parallelogram', 'document', 
+            'cylinder', 'cloud', 'callout', 'plus', 'database', 'cube'].includes(type);
   };
 
   // Render shape preview while drawing
@@ -708,8 +761,7 @@ export const Canvas: React.FC<CanvasProps> = ({
       height,
     };
 
-    const svgShapes: ElementType[] = ['diamond', 'triangle', 'hexagon', 'star'];
-    if (svgShapes.includes(drawingShape.type) && width > 0 && height > 0) {
+    if (isSvgShape(drawingShape.type) && width > 0 && height > 0) {
       const path = getSvgPath(drawingShape.type, width, height);
       return (
         <div className={styles.preview} style={style}>
@@ -734,10 +786,56 @@ export const Canvas: React.FC<CanvasProps> = ({
     );
   };
 
+  // Check if the currently selected element is an arrow type
+  const isArrowSelected = (): boolean => {
+    if (!selectedElementId) return false;
+    const selectedElement = elements.find(el => el.id === selectedElementId);
+    return selectedElement?.type === 'arrow' || selectedElement?.type === 'doubleArrow';
+  };
+
+  // Render connection handles when arrow is selected (for connecting shapes)
+  const renderConnectionHandles = (element: DiagramElement) => {
+    if (!isArrowSelected()) return null;
+    if (element.type === 'arrow' || element.type === 'doubleArrow' || element.type === 'text') return null;
+    if (element.id === selectedElementId) return null;
+
+    const size = element.size || { width: 100, height: 100 };
+    const handleSize = 20;
+    const handles = [
+      { direction: 'top', x: size.width / 2, y: 0 },
+      { direction: 'right', x: size.width, y: size.height / 2 },
+      { direction: 'bottom', x: size.width / 2, y: size.height },
+      { direction: 'left', x: 0, y: size.height / 2 },
+    ];
+
+    return handles.map((handle) => (
+      <div
+        key={handle.direction}
+        className={styles.connectionHandle}
+        style={{
+          left: handle.x - handleSize / 2,
+          top: handle.y - handleSize / 2,
+          width: handleSize,
+          height: handleSize,
+        }}
+        title={`Connect ${handle.direction}`}
+      >
+        <svg width={handleSize} height={handleSize} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          {handle.direction === 'top' && <path d="M12 19V5M5 12l7-7 7 7" />}
+          {handle.direction === 'right' && <path d="M5 12h14M12 5l7 7-7 7" />}
+          {handle.direction === 'bottom' && <path d="M12 5v14M19 12l-7 7-7-7" />}
+          {handle.direction === 'left' && <path d="M19 12H5M12 19l-7-7 7-7" />}
+        </svg>
+      </div>
+    ));
+  };
+
   // Render resize handles
   const renderResizeHandles = (element: DiagramElement) => {
     if (element.id !== selectedElementId) return null;
-    if (element.type === 'arrow' || element.type === 'text') return null;
+    if (element.type === 'arrow' || element.type === 'doubleArrow' || element.type === 'text') return null;
+    // Don't show resize handles when an arrow is selected (show connection handles instead)
+    if (isArrowSelected() && element.id !== selectedElementId) return null;
 
     const size = element.size || { width: 100, height: 100 };
     const handleSize = 8;
@@ -800,11 +898,13 @@ export const Canvas: React.FC<CanvasProps> = ({
 
     const isSelected = element.id === selectedElementId;
 
-    if (element.type === 'arrow' && element.startPoint && element.endPoint) {
+    // Single and double arrows
+    if ((element.type === 'arrow' || element.type === 'doubleArrow') && element.startPoint && element.endPoint) {
       const x1 = element.startPoint.x * zoom + pan.x;
       const y1 = element.startPoint.y * zoom + pan.y;
       const x2 = element.endPoint.x * zoom + pan.x;
       const y2 = element.endPoint.y * zoom + pan.y;
+      const isDoubleArrow = element.type === 'doubleArrow';
 
       return (
         <svg
@@ -813,15 +913,27 @@ export const Canvas: React.FC<CanvasProps> = ({
         >
           <defs>
             <marker
-              id={`arrowhead-${element.id}`}
+              id={`arrowhead-end-${element.id}`}
               markerWidth="10"
               markerHeight="10"
               refX="9"
               refY="3"
               orient="auto"
             >
-              <polygon points="0 0, 10 3, 0 6" fill={element.color || '#333333'} />
+              <polygon points="0 0, 10 3, 0 6" fill={isSelected ? '#0070f3' : element.color || '#333333'} />
             </marker>
+            {isDoubleArrow && (
+              <marker
+                id={`arrowhead-start-${element.id}`}
+                markerWidth="10"
+                markerHeight="10"
+                refX="1"
+                refY="3"
+                orient="auto"
+              >
+                <polygon points="10 0, 0 3, 10 6" fill={isSelected ? '#0070f3' : element.color || '#333333'} />
+              </marker>
+            )}
           </defs>
           <line
             x1={x1}
@@ -830,7 +942,8 @@ export const Canvas: React.FC<CanvasProps> = ({
             y2={y2}
             stroke={isSelected ? '#0070f3' : element.color || '#333333'}
             strokeWidth={element.borderWidth || 2}
-            markerEnd={`url(#arrowhead-${element.id})`}
+            markerEnd={`url(#arrowhead-end-${element.id})`}
+            markerStart={isDoubleArrow ? `url(#arrowhead-start-${element.id})` : undefined}
             className={`${styles.arrow} ${isSelected ? styles.selected : ''}`}
             style={{ pointerEvents: 'stroke', cursor: 'pointer' }}
             onMouseDown={(e) => {
@@ -861,9 +974,8 @@ export const Canvas: React.FC<CanvasProps> = ({
       );
     }
 
-    // SVG-based shapes (diamond, triangle, hexagon, star)
-    const svgShapes: ElementType[] = ['diamond', 'triangle', 'hexagon', 'star'];
-    if (svgShapes.includes(element.type)) {
+    // SVG-based shapes
+    if (isSvgShape(element.type)) {
       const width = element.size?.width || 100;
       const height = element.size?.height || 100;
       const path = getSvgPath(element.type, width, height);
@@ -884,6 +996,60 @@ export const Canvas: React.FC<CanvasProps> = ({
           <svg width={width} height={height} style={{ position: 'absolute', top: 0, left: 0 }}>
             <path
               d={path}
+              fill={element.color || '#ffffff'}
+              stroke={element.borderColor || '#333333'}
+              strokeWidth={element.borderWidth || 2}
+              fillRule="evenodd"
+            />
+          </svg>
+          {isEditing ? (
+            <textarea
+              className={styles.shapeTextInput}
+              value={element.text || ''}
+              onChange={(e) => handleTextChange(element.id, e.target.value)}
+              onBlur={() => setEditingElementId(null)}
+              onKeyDown={(e) => {
+                if (e.key === 'Escape') setEditingElementId(null);
+              }}
+              style={{ fontSize: element.fontSize }}
+              autoFocus
+              placeholder="Enter text..."
+            />
+          ) : (
+            <span className={styles.shapeText} style={{ fontSize: element.fontSize }}>
+              {element.text || ''}
+            </span>
+          )}
+          {renderResizeHandles(element)}
+          {renderConnectionHandles(element)}
+        </div>
+      );
+    }
+
+    // Ellipse shape
+    if (element.type === 'ellipse') {
+      const width = element.size?.width || 100;
+      const height = element.size?.height || 100;
+      const isEditing = editingElementId === element.id;
+
+      return (
+        <div
+          key={element.id}
+          className={`${styles.element} ${isSelected ? styles.selected : ''}`}
+          style={{
+            ...style,
+            width,
+            height,
+          }}
+          onMouseDown={(e) => handleElementMouseDown(e, element.id)}
+          onDoubleClick={(e) => handleElementDoubleClick(e, element.id)}
+        >
+          <svg width={width} height={height} style={{ position: 'absolute', top: 0, left: 0 }}>
+            <ellipse
+              cx={width / 2}
+              cy={height / 2}
+              rx={width / 2 - 1}
+              ry={height / 2 - 1}
               fill={element.color || '#ffffff'}
               stroke={element.borderColor || '#333333'}
               strokeWidth={element.borderWidth || 2}
@@ -908,11 +1074,12 @@ export const Canvas: React.FC<CanvasProps> = ({
             </span>
           )}
           {renderResizeHandles(element)}
+          {renderConnectionHandles(element)}
         </div>
       );
     }
 
-    // Standard shapes (rectangle, circle)
+    // Standard shapes (rectangle, circle, roundedRect)
     const shapeStyle: React.CSSProperties = {
       width: element.size?.width,
       height: element.size?.height,
@@ -950,6 +1117,7 @@ export const Canvas: React.FC<CanvasProps> = ({
           </span>
         )}
         {renderResizeHandles(element)}
+        {renderConnectionHandles(element)}
       </div>
     );
   };
