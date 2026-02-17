@@ -70,6 +70,40 @@ const getConnectionPoint = (element: DiagramElement, targetPoint: Position): Pos
   };
 };
 
+// Helper to update arrow endpoints when a connected element changes
+const updateArrowsForElement = (
+  elements: DiagramElement[],
+  elementId: string
+): DiagramElement[] => {
+  return elements.map((el) => {
+    if (el.type !== 'arrow') return el;
+
+    if (el.startElementId === elementId || el.endElementId === elementId) {
+      const startEl = el.startElementId
+        ? elements.find((e) => e.id === el.startElementId)
+        : null;
+      const endEl = el.endElementId
+        ? elements.find((e) => e.id === el.endElementId)
+        : null;
+
+      let newStartPoint = el.startPoint!;
+      let newEndPoint = el.endPoint!;
+
+      if (startEl && endEl) {
+        newStartPoint = getConnectionPoint(startEl, getElementCenter(endEl));
+        newEndPoint = getConnectionPoint(endEl, getElementCenter(startEl));
+      } else if (startEl) {
+        newStartPoint = getConnectionPoint(startEl, el.endPoint!);
+      } else if (endEl) {
+        newEndPoint = getConnectionPoint(endEl, el.startPoint!);
+      }
+
+      return { ...el, startPoint: newStartPoint, endPoint: newEndPoint, position: newStartPoint };
+    }
+    return el;
+  });
+};
+
 export const Canvas: React.FC<CanvasProps> = ({
   elements,
   selectedElementId,
@@ -417,33 +451,7 @@ export const Canvas: React.FC<CanvasProps> = ({
         // Update connected arrows
         const selectedElement = updatedElements.find((el) => el.id === selectedElementId);
         if (selectedElement && selectedElement.type !== 'arrow') {
-          updatedElements = updatedElements.map((el) => {
-            if (el.type !== 'arrow') return el;
-
-            if (el.startElementId === selectedElementId || el.endElementId === selectedElementId) {
-              const startEl = el.startElementId
-                ? updatedElements.find((e) => e.id === el.startElementId)
-                : null;
-              const endEl = el.endElementId
-                ? updatedElements.find((e) => e.id === el.endElementId)
-                : null;
-
-              let newStartPoint = el.startPoint!;
-              let newEndPoint = el.endPoint!;
-
-              if (startEl && endEl) {
-                newStartPoint = getConnectionPoint(startEl, getElementCenter(endEl));
-                newEndPoint = getConnectionPoint(endEl, getElementCenter(startEl));
-              } else if (startEl) {
-                newStartPoint = getConnectionPoint(startEl, el.endPoint!);
-              } else if (endEl) {
-                newEndPoint = getConnectionPoint(endEl, el.startPoint!);
-              }
-
-              return { ...el, startPoint: newStartPoint, endPoint: newEndPoint, position: newStartPoint };
-            }
-            return el;
-          });
+          updatedElements = updateArrowsForElement(updatedElements, selectedElementId);
         }
 
         onElementsChange(updatedElements);
@@ -489,33 +497,7 @@ export const Canvas: React.FC<CanvasProps> = ({
         );
 
         // Update connected arrows after resize
-        updatedElements = updatedElements.map((el) => {
-          if (el.type !== 'arrow') return el;
-
-          if (el.startElementId === selectedElementId || el.endElementId === selectedElementId) {
-            const startEl = el.startElementId
-              ? updatedElements.find((e) => e.id === el.startElementId)
-              : null;
-            const endEl = el.endElementId
-              ? updatedElements.find((e) => e.id === el.endElementId)
-              : null;
-
-            let newStartPoint = el.startPoint!;
-            let newEndPoint = el.endPoint!;
-
-            if (startEl && endEl) {
-              newStartPoint = getConnectionPoint(startEl, getElementCenter(endEl));
-              newEndPoint = getConnectionPoint(endEl, getElementCenter(startEl));
-            } else if (startEl) {
-              newStartPoint = getConnectionPoint(startEl, el.endPoint!);
-            } else if (endEl) {
-              newEndPoint = getConnectionPoint(endEl, el.startPoint!);
-            }
-
-            return { ...el, startPoint: newStartPoint, endPoint: newEndPoint, position: newStartPoint };
-          }
-          return el;
-        });
+        updatedElements = updateArrowsForElement(updatedElements, selectedElementId);
 
         onElementsChange(updatedElements);
       }
@@ -656,9 +638,11 @@ export const Canvas: React.FC<CanvasProps> = ({
         const outerR = Math.min(width, height) / 2;
         const innerR = outerR * 0.4;
         const points = [];
+        const startAngle = Math.PI / 2;
+        const angleStep = Math.PI / 5;
         for (let i = 0; i < 10; i++) {
           const r = i % 2 === 0 ? outerR : innerR;
-          const angle = (Math.PI / 2) + (i * Math.PI / 5);
+          const angle = startAngle + (i * angleStep);
           points.push(`${cx + r * Math.cos(angle)} ${cy - r * Math.sin(angle)}`);
         }
         return `M ${points.join(' L ')} Z`;

@@ -112,7 +112,7 @@
   opacity: 0.5;
   pointer-events: none;
   border: 2px dashed vars.$primary-color;
-  background: rgba(vars.$primary-color, 0.1);
+  background: rgba(0, 112, 243, 0.1);
 
   &.circle {
     border-radius: 50%;
