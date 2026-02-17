@@ -1,0 +1,44 @@
+@use '@/styles/variables.scss' as vars;
+
+.toolbar {
+  position: fixed;
+  top: vars.$spacing-lg;
+  left: 50%;
+  transform: translateX(-50%);
+  background: vars.$white;
+  border-radius: vars.$border-radius-lg;
+  box-shadow: vars.$shadow-lg;
+  padding: vars.$spacing-sm;
+  display: flex;
+  gap: vars.$spacing-sm;
+  z-index: vars.$z-toolbar;
+  flex-wrap: wrap;
+  max-width: 90vw;
+
+  @media (max-width: vars.$breakpoint-mobile) {
+    top: auto;
+    bottom: vars.$spacing-lg;
+    padding: vars.$spacing-xs;
+    gap: vars.$spacing-xs;
+  }
+}
+
+.divider {
+  width: 1px;
+  background: vars.$border-color;
+  margin: 0 vars.$spacing-xs;
+
+  @media (max-width: vars.$breakpoint-mobile) {
+    display: none;
+  }
+}
+
+.toolGroup {
+  display: flex;
+  gap: vars.$spacing-xs;
+  align-items: center;
+
+  @media (max-width: vars.$breakpoint-mobile) {
+    gap: 4px;
+  }
+}
