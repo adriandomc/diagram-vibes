@@ -1,6 +1,6 @@
 // Type definitions for diagram elements
 
-export type ElementType = 'text' | 'rectangle' | 'circle' | 'arrow';
+export type ElementType = 'text' | 'rectangle' | 'circle' | 'arrow' | 'diamond' | 'triangle' | 'hexagon' | 'star';
 
 export interface Position {
   x: number;
@@ -26,6 +26,9 @@ export interface DiagramElement {
   // For arrows
   startPoint?: Position;
   endPoint?: Position;
+  // For arrow connections to shapes
+  startElementId?: string;
+  endElementId?: string;
 }
 
 export interface CanvasState {

@@ -63,6 +63,18 @@ export const DiagramEditor: React.FC = () => {
         case 'a':
           setSelectedTool('arrow');
           break;
+        case 'd':
+          setSelectedTool('diamond');
+          break;
+        case 'i':
+          setSelectedTool('triangle');
+          break;
+        case 'h':
+          setSelectedTool('hexagon');
+          break;
+        case 's':
+          setSelectedTool('star');
+          break;
         case 'g':
           handleToggleGrid();
           break;
