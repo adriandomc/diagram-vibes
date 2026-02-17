@@ -8,7 +8,11 @@ import {
   ZoomIn, 
   ZoomOut,
   Grid3x3,
-  Trash2
+  Trash2,
+  Diamond,
+  Triangle,
+  Hexagon,
+  Star
 } from 'lucide-react';
 import { Button } from '@/components/atoms/Button';
 import { ElementType } from '@/types/diagram';
@@ -75,6 +79,38 @@ export const Toolbar: React.FC<ToolbarProps> = ({
           title="Arrow (A)"
         >
           <ArrowRight />
+        </Button>
+        <Button
+          variant="icon"
+          active={selectedTool === 'diamond'}
+          onClick={() => onToolSelect('diamond')}
+          title="Diamond (D)"
+        >
+          <Diamond />
+        </Button>
+        <Button
+          variant="icon"
+          active={selectedTool === 'triangle'}
+          onClick={() => onToolSelect('triangle')}
+          title="Triangle (I)"
+        >
+          <Triangle />
+        </Button>
+        <Button
+          variant="icon"
+          active={selectedTool === 'hexagon'}
+          onClick={() => onToolSelect('hexagon')}
+          title="Hexagon (H)"
+        >
+          <Hexagon />
+        </Button>
+        <Button
+          variant="icon"
+          active={selectedTool === 'star'}
+          onClick={() => onToolSelect('star')}
+          title="Star (S)"
+        >
+          <Star />
         </Button>
       </div>
 
