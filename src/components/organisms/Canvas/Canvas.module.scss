@@ -1,0 +1,87 @@
+@use '@/styles/variables.scss' as vars;
+
+.canvas {
+  width: 100%;
+  height: 100vh;
+  position: relative;
+  overflow: hidden;
+  background: vars.$white;
+  cursor: default;
+
+  &.grabbing {
+    cursor: grabbing;
+  }
+
+  &.crosshair {
+    cursor: crosshair;
+  }
+}
+
+.viewport {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+.grid {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.element {
+  position: absolute;
+  cursor: move;
+  user-select: none;
+
+  &.selected {
+    outline: 2px solid vars.$primary-color;
+    outline-offset: 2px;
+  }
+
+  &.text {
+    cursor: text;
+    padding: vars.$spacing-sm;
+    min-width: 100px;
+    min-height: 30px;
+  }
+
+  &.rectangle,
+  &.circle {
+    border: 2px solid vars.$text-color;
+    background: vars.$white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: vars.$spacing-sm;
+  }
+
+  &.circle {
+    border-radius: 50%;
+  }
+}
+
+.textInput {
+  border: none;
+  outline: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: 16px;
+  width: 100%;
+  height: 100%;
+  resize: none;
+  overflow: hidden;
+}
+
+.arrow {
+  position: absolute;
+  pointer-events: none;
+
+  &.selected {
+    stroke: vars.$primary-color;
+    stroke-width: 3;
+  }
+}
