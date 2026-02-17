@@ -2,7 +2,7 @@
 
 import React, { useRef, useState, useCallback, useEffect } from 'react';
 import { DiagramElement, Position, ElementType, Size } from '@/types/diagram';
-import { snapToGrid, generateId } from '@/utils/helpers';
+import { snapToGrid, generateId, distance } from '@/utils/helpers';
 import styles from './Canvas.module.scss';
 
 export interface CanvasProps {
@@ -13,10 +13,14 @@ export interface CanvasProps {
   pan: Position;
   gridSize: number;
   snapToGridEnabled: boolean;
+  showGrid: boolean;
   onElementsChange: (elements: DiagramElement[]) => void;
   onSelectElement: (id: string | null) => void;
   onPanChange: (pan: Position) => void;
 }
+
+// Minimum distance for arrow creation (in canvas units)
+const MIN_ARROW_DISTANCE = 20;
 
 // Helper to get the center of an element
 const getElementCenter = (element: DiagramElement): Position => {
@@ -112,6 +116,7 @@ export const Canvas: React.FC<CanvasProps> = ({
   pan,
   gridSize,
   snapToGridEnabled,
+  showGrid,
   onElementsChange,
   onSelectElement,
   onPanChange,
@@ -126,6 +131,24 @@ export const Canvas: React.FC<CanvasProps> = ({
   const [shapePreview, setShapePreview] = useState<{ position: Position; size: Size } | null>(null);
   const [isResizing, setIsResizing] = useState(false);
   const [resizeHandle, setResizeHandle] = useState<string | null>(null);
+  const [editingElementId, setEditingElementId] = useState<string | null>(null);
+  const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
+
+  // Track canvas size for grid rendering
+  useEffect(() => {
+    const updateCanvasSize = () => {
+      if (canvasRef.current) {
+        setCanvasSize({
+          width: canvasRef.current.clientWidth,
+          height: canvasRef.current.clientHeight,
+        });
+      }
+    };
+
+    updateCanvasSize();
+    window.addEventListener('resize', updateCanvasSize);
+    return () => window.removeEventListener('resize', updateCanvasSize);
+  }, []);
 
   // Convert screen coordinates to canvas coordinates
   const screenToCanvas = useCallback(
@@ -309,6 +332,15 @@ export const Canvas: React.FC<CanvasProps> = ({
       if (drawingArrow && arrowPreviewEnd) {
         const canvasPos = screenToCanvas(e.clientX, e.clientY);
         const endPos = snapToGridEnabled ? snapToGrid(canvasPos, gridSize) : canvasPos;
+        
+        // Check minimum distance - don't create arrow if it's too short (prevents single-click arrows)
+        const arrowDistance = distance(drawingArrow.start, endPos);
+        if (arrowDistance < MIN_ARROW_DISTANCE) {
+          setDrawingArrow(null);
+          setArrowPreviewEnd(null);
+          return;
+        }
+        
         const endElement = findElementAtPosition(endPos);
 
         // Calculate proper start and end points based on connections
@@ -540,11 +572,22 @@ export const Canvas: React.FC<CanvasProps> = ({
     [elements, onElementsChange]
   );
 
-  // Render grid
+  // Handle double click to edit text on shapes
+  const handleElementDoubleClick = useCallback(
+    (e: React.MouseEvent, elementId: string) => {
+      e.stopPropagation();
+      const element = elements.find((el) => el.id === elementId);
+      if (element && element.type !== 'arrow') {
+        setEditingElementId(elementId);
+      }
+    },
+    [elements]
+  );
+
+  // Render grid using tracked canvas size
   const renderGrid = () => {
-    if (!canvasRef.current) return null;
-    const width = canvasRef.current.clientWidth;
-    const height = canvasRef.current.clientHeight;
+    if (canvasSize.width === 0 || canvasSize.height === 0) return null;
+    const { width, height } = canvasSize;
 
     const lines = [];
     const scaledGridSize = gridSize * zoom;
@@ -824,6 +867,7 @@ export const Canvas: React.FC<CanvasProps> = ({
       const width = element.size?.width || 100;
       const height = element.size?.height || 100;
       const path = getSvgPath(element.type, width, height);
+      const isEditing = editingElementId === element.id;
 
       return (
         <div
@@ -835,6 +879,7 @@ export const Canvas: React.FC<CanvasProps> = ({
             height,
           }}
           onMouseDown={(e) => handleElementMouseDown(e, element.id)}
+          onDoubleClick={(e) => handleElementDoubleClick(e, element.id)}
         >
           <svg width={width} height={height} style={{ position: 'absolute', top: 0, left: 0 }}>
             <path
@@ -844,9 +889,22 @@ export const Canvas: React.FC<CanvasProps> = ({
               strokeWidth={element.borderWidth || 2}
             />
           </svg>
-          {element.text && (
-            <span style={{ fontSize: element.fontSize, position: 'relative', zIndex: 1 }}>
-              {element.text}
+          {isEditing ? (
+            <textarea
+              className={styles.shapeTextInput}
+              value={element.text || ''}
+              onChange={(e) => handleTextChange(element.id, e.target.value)}
+              onBlur={() => setEditingElementId(null)}
+              onKeyDown={(e) => {
+                if (e.key === 'Escape') setEditingElementId(null);
+              }}
+              style={{ fontSize: element.fontSize }}
+              autoFocus
+              placeholder="Enter text..."
+            />
+          ) : (
+            <span className={styles.shapeText} style={{ fontSize: element.fontSize }}>
+              {element.text || ''}
             </span>
           )}
           {renderResizeHandles(element)}
@@ -863,14 +921,34 @@ export const Canvas: React.FC<CanvasProps> = ({
       borderWidth: element.borderWidth,
     };
 
+    const isEditing = editingElementId === element.id;
+
     return (
       <div
         key={element.id}
         className={`${styles.element} ${styles[element.type]} ${isSelected ? styles.selected : ''}`}
         style={{ ...style, ...shapeStyle }}
         onMouseDown={(e) => handleElementMouseDown(e, element.id)}
+        onDoubleClick={(e) => handleElementDoubleClick(e, element.id)}
       >
-        {element.text && <span style={{ fontSize: element.fontSize }}>{element.text}</span>}
+        {isEditing ? (
+          <textarea
+            className={styles.shapeTextInput}
+            value={element.text || ''}
+            onChange={(e) => handleTextChange(element.id, e.target.value)}
+            onBlur={() => setEditingElementId(null)}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') setEditingElementId(null);
+            }}
+            style={{ fontSize: element.fontSize }}
+            autoFocus
+            placeholder="Enter text..."
+          />
+        ) : (
+          <span className={styles.shapeText} style={{ fontSize: element.fontSize }}>
+            {element.text || ''}
+          </span>
+        )}
         {renderResizeHandles(element)}
       </div>
     );
@@ -884,7 +962,7 @@ export const Canvas: React.FC<CanvasProps> = ({
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
     >
-      {snapToGridEnabled && renderGrid()}
+      {showGrid && renderGrid()}
       <div className={styles.viewport}>
         {elements.map((element) => renderElement(element))}
         {renderArrowPreview()}

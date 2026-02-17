@@ -14,6 +14,7 @@ export const DiagramEditor: React.FC = () => {
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState<Position>({ x: 0, y: 0 });
   const [snapToGrid, setSnapToGrid] = useState(true);
+  const [showGrid, setShowGrid] = useState(true);
   const gridSize = 20;
 
   // Zoom in
@@ -26,8 +27,9 @@ export const DiagramEditor: React.FC = () => {
     setZoom((prev) => clamp(prev - 0.1, 0.1, 3));
   }, []);
 
-  // Toggle grid
+  // Toggle grid visibility
   const handleToggleGrid = useCallback(() => {
+    setShowGrid((prev) => !prev);
     setSnapToGrid((prev) => !prev);
   }, []);
 
@@ -130,7 +132,7 @@ export const DiagramEditor: React.FC = () => {
         onZoomOut={handleZoomOut}
         onToggleGrid={handleToggleGrid}
         onClear={handleClear}
-        gridEnabled={snapToGrid}
+        gridEnabled={showGrid}
       />
       <Canvas
         elements={elements}
@@ -140,6 +142,7 @@ export const DiagramEditor: React.FC = () => {
         pan={pan}
         gridSize={gridSize}
         snapToGridEnabled={snapToGrid}
+        showGrid={showGrid}
         onElementsChange={setElements}
         onSelectElement={setSelectedElementId}
         onPanChange={setPan}
